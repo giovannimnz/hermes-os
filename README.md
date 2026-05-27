@@ -2,7 +2,7 @@
 
 <br/>
 <p align="center">
-  <a href="https://github.com/giovannimnz/hermes-os"><img src="https://img.shields.io/badge/Fork%20of-hermes--desktop-2CA5E0?style=for-the-badge" alt="Fork of hermes-desktop"></a>
+  <a href="https://github.com/giovannimnz/hermes-os"><img src="https://img.shields.io/badge/Fork%20of-hermes--os-2CA5E0?style=for-the-badge" alt="Fork of hermes-os"></a>
   <a href="https://github.com/giovannimnz/hermes-os/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="License: MIT"></a>
   <a href="https://electron.electronjs.org"><img src="https://img.shields.io/badge/Electron%20%2B%20Web-2CA5E0?style=for-the-badge&logo=electron&logoColor=white" alt="Electron + Web"></a>
 </p>
