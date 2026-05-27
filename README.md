@@ -1,20 +1,17 @@
-<img width="100%" alt="HERMES DESKTOP" src="previews/header.webp" />
+<img width="100%" alt="HERMES OS" src="previews/header.webp" />
 
 <br/>
 <p align="center">
-  <a href="https://hermes-agent.nousresearch.com/docs/"><img src="https://img.shields.io/badge/Docs-hermes--agent.nousresearch.com-FFD700?style=for-the-badge" alt="Documentation"></a>
-  <a href="https://t.me/hermes_agent_desktop"><img src="https://img.shields.io/badge/Telegram-2CA5E0?style=for-the-badge&logo=telegram&logoColor=white" alt="Telegram"></a>
-  <a href="https://github.com/fathah/hermes-desktop/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="License: MIT"></a>
-  <a href="https://hermesagents.cc/"><img src="https://img.shields.io/badge/Download-Releases-FF6600?style=for-the-badge" alt="Releases"></a>
-<a href="https://github.com/fathah/hermes-desktop/stargazers">
-  <img src="https://img.shields.io/github/stars/fathah/hermes-desktop?style=for-the-badge&color=FFD700&label=Stars" alt="Stars">
-</a>
-  <a href="https://github.com/fathah/hermes-desktop/releases/">
-  <img src="https://img.shields.io/github/downloads/fathah/hermes-desktop/total?style=for-the-badge&color=00B496&label=Total%20Downloads" alt="Downloads">
-</a>
+  <a href="https://github.com/giovannimnz/hermes-os"><img src="https://img.shields.io/badge/Fork%20of-hermes--desktop-2CA5E0?style=for-the-badge" alt="Fork of hermes-desktop"></a>
+  <a href="https://github.com/giovannimnz/hermes-os/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="License: MIT"></a>
+  <a href="https://electron.electronjs.org"><img src="https://img.shields.io/badge/Electron%20%2B%20Web-2CA5E0?style=for-the-badge&logo=electron&logoColor=white" alt="Electron + Web"></a>
 </p>
 
-> **This project is in active development.** Features may change, and some things might break. If you run into a problem or have an idea, [open an issue](https://github.com/fathah/hermes-desktop/issues). Contributions are welcome!
+# Hermes OS
+
+**Fork de [fathah/hermes-desktop](https://github.com/fathah/hermes-desktop)** — arquitetura dual-target: Electron app + webapp do mesmo codebase React.
+
+> **This project is in active development.** Features may change, and some things might break. If you run into an issue or have an idea, [open an issue](https://github.com/giovannimnz/hermes-os/issues). Contributions are welcome!
 
 ## Languages
 
