@@ -36,20 +36,34 @@ hermes-os/
 
 ## Backend
 
-- **Gateway:** `~/GitHub/hermes-ws-gateway/` rodando em `10.1.1.x:8200`
-- **Auth:** Bearer token (mesmo do gateway — `~/.hermes/gateway_ws_token`)
-- **Session store:** PostgreSQL via gateway_db.py (schema `gateway_ws`)
-- **Cron:** APScheduler via gateway (porta 8301)
-- **Profiles:** Gateway suporta multi-profile via PostgreSQL
+Dois gateways coexistem em portas diferentes com propositos distintos:
 
-## Dependências Externas
+| Gateway | Stack | Porta WS | Porta HTTP | Protocolo | Session Store |
+|---------|-------|---------|-----------|-----------|---------------|
+| hermes-ws-gateway | Python asyncio | 8300 | 8301 | JSON frames | Docker SQLite (`hermes-pers`) |
+| hermes-claw-gateway | Node.js | 8400 | 8401 | OpenClaw ACP v3 | PostgreSQL (`gateway_claw`) |
+
+### O que cada gateway ja tem:
+- **hermes-ws-gateway**: streaming chat, cron CRUD, skills list, model config
+- **hermes-claw-gateway**: ACP agent execution, streaming, cron, skills, Plane API, audit log
+
+### O que hermes-os webapp precisa (gap):
+- Profiles, session message history, memory, soul, credential pool, FTS search
+- **Nenhum gateway tem isso** — Phase 03 decide a arquitetura
+
+### Opcoes em analise (Phase 03):
+- **Opcao A:** Novo FastAPI service dedicado ao hermes-os (porta 8500)
+- **Opcao B:** Extender hermes-claw-gateway com frames ACP
+- **Opcao C:** Hybrid — FastAPI leve + hermes-claw-gateway pra execucao
+
+## Dependencias Externas (atuais)
 
 | Serviço | Host | Porta | Notas |
 |---------|------|-------|-------|
-| hermes-ws-gateway | 10.1.1.x | 8200 | WS + HTTP REST |
-| hermes-ws-gateway cron | 10.1.1.x | 8301 | APScheduler |
-| PostgreSQL (gateway) | localhost | 8745 | Schema gateway_ws |
-| pgBouncer | localhost | 8475 | Pool de conexões |
+| hermes-ws-gateway | 10.1.1.x | 8300/8301 | Chat streaming, cron, skills |
+| hermes-claw-gateway | 10.1.1.x | 8400/8401 | ACP agent execution (Paperclip, Plane) |
+| PostgreSQL | localhost | 8745 | Schema `gateway_claw` (via pgBouncer :8475) |
+| hermes-pers (Docker) | localhost | — | SQLite sessions (hermes-ws-gateway) |
 
 ## Infraestrutura de Build
 

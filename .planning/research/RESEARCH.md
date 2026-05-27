@@ -41,42 +41,120 @@ The renderer React imports from `@renderer` alias and is unaware of which shell 
 ---
 
 ## hermes-ws-gateway Analysis
+## hermes-ws-gateway Analysis (Python, porta 8300/8301)
 
-### Current Endpoints (port 8200)
-**Public:**
-- `GET /health` → `{"status": "ok"}`
-- `GET /ready` → pool status, connections
+### Stack
+- Python asyncio + `websockets` library (NOT FastAPI)
+- Auth: HMAC Bearer token (`~/.hermes/gateway_ws_token`)
+- Sessions: Docker SQLite em container `hermes-pers` (NAO PostgreSQL diretamente)
+- Subprocess pool: Hermes CLI `--stdio`
+- Cron: APScheduler
 
-**Auth-gated REST:**
-- `GET /skills` → list skills
-- `GET /model` → current model config
-- `POST /execute` → sync execute (no streaming)
-- `GET/POST/PATCH/DELETE /sessions` → session CRUD
-- `GET/POST/PATCH/DELETE /cronjobs` → cron CRUD
+### Current REST Endpoints (porta 8301)
+| Method | Path | Descricao |
+|--------|------|-----------|
+| GET | /health | Health check |
+| GET | /ready | Pool status |
+| GET | /pool/stats | Subprocess pool stats |
+| POST | /pool/drain | Drain pool |
+| POST | /pool/restart | Restart pool |
+| GET | /skills | List skills |
+| GET | /skills/\<cat\>/\<name\> | Get skill content |
+| GET | /model | Current model config |
+| POST | /telegram/webhook | Telegram webhook |
+| GET | /sessions | List sessions |
+| GET | /sessions/\<key\> | Get session |
+| POST | /sessions | Create/upsert session |
+| PATCH | /sessions/\<key\> | Update session |
+| DELETE | /sessions/\<key\> | Delete session |
+| GET | /cronjobs | List cron jobs |
+| GET | /cronjobs/\<id\> | Get cron job |
+| POST | /cronjobs | Create cron job |
+| PATCH | /cronjobs/\<id\> | Update cron job |
+| DELETE | /cronjobs/\<id\> | Delete cron job |
+| POST | /cronjobs/\<id\>/run | Trigger cron job |
 
-**WebSocket (port 8200):**
-- `ws://host:8200/ws?token=<bearer>`
-- Client sends: `{type: "execute", prompt, session_id?, model?}`
-- Server sends: `{type: "chunk", content}` / `{type: "result", result: {output, ok}}`
+### WebSocket Streaming (porta 8300)
+Client sends: `{type: "execute", prompt, session_id?, model?}`
+Server sends: `{type: "chunk", content}` / `{type: "result", result: {output, ok}}`
 
-### Critical Gaps for Webapp
-| Gap | Impact | Phase |
-|-----|--------|-------|
-| No `history` in execute | Can't resume conversations | 03 |
-| No `attachments` in execute | Can't send images | 03 |
-| No session messages endpoint | Can't load conversation history | 03 |
-| No FTS search | Can't search old messages | 03 |
-| No profiles endpoints | Can't manage profiles | 03 |
-| No memory endpoints | Can't manage memory | 03 |
-| No soul endpoints | Can't manage personality | 03 |
-| No credential pool endpoints | Can't manage API keys | 03 |
-| No session cache sync | Can't generate titles | 03 |
+### Critical Gaps for hermes-os webapp
+| Gap | Impact | Severity |
+|-----|--------|----------|
+| No `history` param in execute | Can't resume conversations | CRITICAL |
+| No `attachments` param in execute | Can't send images | CRITICAL |
+| No session messages endpoint | Can't load conversation history | CRITICAL |
+| No FTS search | Can't search old messages | HIGH |
+| No profiles endpoints | Can't manage profiles | HIGH |
+| No memory endpoints | Can't manage memory | HIGH |
+| No soul endpoints | Can't manage personality | HIGH |
+| No credential pool endpoints | Can't manage API keys | MEDIUM |
+| No profile concept | Everything is per-gateway, not per-user | CRITICAL |
+| Sessions in Docker SQLite | Not directly accessible from outside container | HIGH |
 
-### PostgreSQL Schema (gateway_db.py)
-- Database: `hindsight` (via pgBouncer `localhost:8475`)
-- Schema: `gateway_ws`
-- Tables: `sessions`, `events`, `metrics`, `config`, `tokens`, `cronjobs`
-- **Missing:** `session_messages`, `profiles`, `memory_entries`, `soul`, `credentials`
+---
+
+## hermes-claw-gateway Analysis (Node.js, porta 8400/8401)
+
+### Stack
+- Node.js 18+, `ws`, `pg`, `pino`, `dotenv`, `node-cron`
+- Auth: OpenClaw ACP v3 (Bearer token, password, Ed25519)
+- Sessions: PostgreSQL schema `gateway_claw`
+- Subprocess pool: Hermes CLI `--stdio`
+- Protocol: OpenClaw Gateway Protocol v3
+
+### ACP v3 Frames (principais)
+```
+Client → Server: req agent { message, sessionKey, idempotencyKey, timeout }
+Server → Client: event agent { payload.type="text", seq++ }
+Server → Client: res agent { payload.text }
+Client → Server: req agent.wait { idempotencyKey }
+Client → Server: req cron.create / cron.list / cron.delete
+Client → Server: req skills.list / skills.execute
+Client → Server: req plane.issues (Plane API proxy)
+```
+
+### PostgreSQL Schema (gateway_claw)
+- `sessions` — session_key, platform, device_id, state, created_at, last_active, message_count
+- `audit` — timestamp, session_key, platform, command, duration_ms, tokens_used, cost_usd, ok, error
+- `cron_jobs` — job_id, name, schedule, deliver, params, enabled, last_run, last_status
+
+### Critical Gaps for hermes-os webapp
+| Gap | Impact | Severity |
+|-----|--------|----------|
+| No session message history | Can't load conversation context | CRITICAL |
+| No profiles table | Nao ha multi-profile | CRITICAL |
+| No memory/soul tables | Nao ha persistencia de memory/soul | HIGH |
+| No credential pool table | Nao ha persistencia de API keys | HIGH |
+| ACP v3 protocol | Webapp precisaria implementar cliente ACP | HIGH |
+| Sessions sao stateless | Nao guarda historico de mensagens | CRITICAL |
+
+---
+
+## Key Insights for Implementation
+
+1. **hermes-ws-gateway sessions sao em Docker SQLite** — containers hermes-pers, NAO diretamente acessiveis via PostgreSQL. O acesso e via `docker exec` script dentro de sessions.py.
+
+2. **hermes-claw-gateway usa PostgreSQL** — schema `gateway_claw`. Sessions sao gerenciadas via `sessionKey` (string livre), mas NAO guardam historico de mensagens.
+
+3. **Streaming e o menor problema** — ambos gateways ja tem streaming (chunk/result). O problema e o stateless: execute so recebe `prompt`, nao `history`.
+
+4. **Profile e a maior lacuna** — hermes-desktop e multi-profile (cada profile e um hermesHome diferente). Nenhum gateway tem esse conceito.
+
+5. **A opcao mais realista pra hermes-os webapp:**
+   - Opcao B (estender hermes-claw-gateway com ACP) ou
+   - Opcao A (FastAPI dedicado)
+   - A Opcao C (hybrid) requer manutencao de dois endpoints no frontend
+
+6. **Se hermes-claw-gateway for o destino:**
+   - Precisa adicionar tabelas: `profiles`, `session_messages`, `memory_entries`, `soul`, `credentials`
+   - Precisa adicionar ACP frames: `req profile.*`, `req memory.*`, `req soul.*`, `req session_history.*`
+   - Precisa adicionar streaming com history ao `req agent`
+
+7. **Se FastAPI dedicado:**
+   - Mesmo Postgres, mesmo subprocess pool Hermes CLI
+   - Nao tem o overhead de implementar ACP v3
+   - Mais simples de construir
 
 ---
 

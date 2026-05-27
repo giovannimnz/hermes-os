@@ -35,11 +35,38 @@ Web target (new):
 ```
 
 ### Critical Path
-1. Phase 02 (DesktopClient interface) must be done before Phase 05 (WebAdapter)
-2. Phase 03 (gateway endpoints) must be done before Phase 05
+1. Phase 03 (backend strategy) must be done before Phase 05 (WebAdapter) — nao da pra implementar adapter sem saber qual backend usar
+2. Phase 02 (DesktopClient interface) must be done before Phase 05 — interface precisa existir primeiro
 3. Phase 04 (web scaffold) done in parallel with Phase 02/03
-4. Phase 05 (WebAdapter) is the largest single phase
+4. Phase 05 (WebAdapter) is the largest single phase — depende de 02, 03, 04
 5. Phase 18 (UAT) requires all previous phases complete
+
+### Backend Strategy (Phase 03)
+
+Dois gateways existem com propositos diferentes:
+
+| Aspecto | hermes-ws-gateway | hermes-claw-gateway |
+|---------|------------------|---------------------|
+| Stack | Python asyncio | Node.js |
+| Portas | 8300 (WS), 8301 (HTTP) | 8400 (WS), 8401 (HTTP) |
+| Protocolo | JSON frames propio | OpenClaw ACP v3 |
+| Sessions | Docker SQLite (`hermes-pers`) | PostgreSQL `gateway_claw` |
+| Profiles | ❌ Nenhum | ❌ Nenhum |
+| Session history | ❌ Nao tem | ❌ Nao tem |
+| Memory/Soul | ❌ Nao tem | ❌ Nao tem |
+| Para quem | Telegram, TUI | Paperclip, Plane |
+| Cron | ✅ ja tem | ✅ ja tem |
+
+**hermes-os webapp precisa de:** profiles, session message history, memory, soul, credential pool, FTS search, streaming com history.
+
+Nenhum gateway tem isso. Fase 03 decide a arquitetura do backend.
+
+**Tres opcoes em debate:**
+- **Opcao A:** Novo servico FastAPI dedicado (porta 8500)
+- **Opcao B:** Extender hermes-claw-gateway com frames ACP pra hermes-os
+- **Opcao C:** Hybrid — FastAPI leve + hermes-claw-gateway pra execucao
+
+**Decisao pendente — precisa ser tomada antes de prosseguir.**
 
 ---
 

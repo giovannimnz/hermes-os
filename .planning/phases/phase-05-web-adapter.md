@@ -8,12 +8,13 @@ Implement `src/shared/desktop/adapters/webAdapter.ts` — a full `DesktopAdapter
 
 ### R01 — WebSocket Connection Manager
 Create `src/shared/desktop/adapters/wsConnection.ts`:
-- Manages single WebSocket connection to gateway
+- Manages single WebSocket connection to hermes-os backend
 - Auto-reconnects on disconnect with exponential backoff
 - Queues messages sent while disconnected
 - Emits events: `chunk`, `reasoning_chunk`, `done`, `error`, `tool_progress`, `usage`
 - Auth: adds `?token=<bearer>` query param on connect
 - Handles ping/pong keepalive
+- Backend URL from `import.meta.env.VITE_HERMES_BACKEND_URL` (decide in Phase 03)
 
 ### R02 — WebAdapter Core
 Create `src/shared/desktop/adapters/webAdapter.ts` implementing `DesktopAdapter` interface:
@@ -141,35 +142,7 @@ src/shared/desktop/adapters/
 
 ## Key Implementation Detail: Streaming
 
-The web adapter must exactly replicate the IPC streaming behavior that `useChatIPC.ts` expects:
-
-```typescript
-// wsConnection.ts
-class WSConnection {
-  private ws: WebSocket | null = null;
-  private listeners: Map<string, Set<Function>> = new Map();
-
-  // Listeners: 'chunk', 'reasoning_chunk', 'done', 'error', 'tool_progress', 'usage'
-  on(event: string, cb: Function): () => void { ... }
-  off(event: string, cb: Function): void { ... }
-
-  async connect(token: string): Promise<void> { ... }
-  send(data: object): void { ... }
-  close(): void { ... }
-}
-```
-
-When a `chunk` WebSocket message arrives:
-```json
-{ "type": "chunk", "content": "text chunk..." }
-```
-→ emit to `on('chunk', callback)` listeners
-
-When a `result` arrives:
-```json
-{ "type": "result", "result": { "output": "...", "session_id": "abc" } }
-```
-→ store session_id, emit to `on('done', callback)` with session_id
+The web adapter must exactly replicate the IPC streaming behavior that `useChatIPC.ts` expects. Backend URL and protocol depend on Phase 03 decision (Opcao A, B, or C). The adapter is written to an interface, so the underlying transport can change without changing the adapter code.
 
 ## Verification
 
