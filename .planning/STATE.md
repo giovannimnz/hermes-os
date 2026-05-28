@@ -36,6 +36,12 @@ Phase 01: Fork setup — in progress
 | 17: PWA offline | Pending | — |
 | 18: UAT | Pending | — |
 
+## M002: Hermes Gateway Session Migration (PostgreSQL + pgbounce)
+
+| Phase | Status | Completed |
+|-------|--------|-----------|
+| 19: hermes-pers-sqlite-to-pg-migration | ✅ Done | 2026-05-28 |
+
 ## Blockers
 
 None currently.
