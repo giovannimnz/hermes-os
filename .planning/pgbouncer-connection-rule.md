@@ -6,7 +6,7 @@
 
 ## Razão
 
-pgbouncer é o connection pooler central do projeto. Todas as ligações passam por ele para:
+pgbouncer é o connection pooler central. Todas as ligações passam por ele para:
 - Limitar o número de conexões directas ao PostgreSQL
 - Reutilizar conexões em vez de abrir/fechar constantemente
 - Centralizar a gestão de conexões num único ponto
@@ -14,7 +14,7 @@ pgbouncer é o connection pooler central do projeto. Todas as ligações passam 
 
 ## Excepções
 
-Ligações de ferramentas de administração que precisam de ver a sessão real do PostgreSQL (ex: `psql` interactivo para debug) podem ligar directo. Scripts automatizados e serviços de produção NÃO.
+Ferramentas de administração interactivas (ex: `psql` para debug) podem ligar directo. Scripts automatizados e serviços de produção NÃO.
 
 ## Configuração
 
@@ -22,42 +22,48 @@ Ligações de ferramentas de administração que precisam de ver a sessão real 
 pgbouncer:  localhost:6432
 PostgreSQL: localhost:8745  (só pgbouncer conecta aqui)
 
-[databases] em /etc/pgbouncer/pgbouncer.ini:
+[database] em /etc/pgbouncer/pgbouncer.ini:
   hermes_gateway = host=127.0.0.1 port=8745 dbname=hermes_gateway
-  hindsight       = host=127.0.0.1 port=8745 dbname=hindsight
 ```
 
 ## Variáveis de ambiente
 
-Para serviços novos, usar:
+Para todos os serviços Hermes:
 
 ```bash
 HERMES_PG_HOST=localhost
 HERMES_PG_PORT=6432       # ← pgbouncer, não 8745
-HERMES_PG_DATABASE=hindsight  # ou hermes_gateway
-HERMES_PG_USER=hindsight
-HERMES_PG_PASSWORD=hindsight_pass
+HERMES_PG_DATABASE=hermes_gateway
+HERMES_PG_USER=hermes
+HERMES_PG_PASSWORD=***
 ```
+
+## Importante — Database único
+
+**REGRA: UM database só — `hermes_gateway`**
+- `hindsight` database foi ELIMINADO
+- Todos os schemas vivem em `hermes_gateway`
+- Não criar novos databases — tudo em `hermes_gateway`
+
+Schemas existentes em `hermes_gateway`:
+
+| Schema | Serviço | Tables |
+|--------|---------|--------|
+| `gateway_ws` | hermes-ws-gateway | sessions, messages, events, metrics, config, tokens, cronjobs, audit |
+| `gateway_acp` | hermes-acp-gateway | sessions, audit, cron_jobs (a criar quando iniciar) |
 
 ## Serviços que usam pgbouncer
 
-| Serviço | Porta | DB | Via pgbouncer |
-|---------|-------|-----|---------------|
-| hermes-ws-gateway | 8300 | hermes_gateway | ✅ localhost:6432 |
-| hermes-claw-gateway | 8400 | hindsight | ✅ localhost:6432 |
-| hermes-pers | 8082 | hindsight | ✅ localhost:6432 (via scripts) |
-| load_to_pg.py | cron | hindsight | ✅ localhost:6432 |
-| ctx-observer cron | - | hindsight | ✅ localhost:6432 |
+| Serviço | Porta | Schema/DB | Via pgbouncer |
+|---------|-------|-----------|---------------|
+| hermes-ws-gateway | 8300 | gateway_ws | ✅ localhost:6432 |
+| hermes-acp-gateway | 8400 | gateway_acp | ✅ localhost:6432 |
+| hermes-pers | 8082 | JSON files + state.db | ✅ via gateway_db.py |
+| ctx-observer cron | - | hermes_memory (hindsight DB) | ✅ localhost:6432 |
 
-## Como adicionar um novo serviço
+## Notas sobre ctx-observer
 
-1. Adicionar a base de dados ao `/etc/pgbouncer/pgbouncer.ini`:
-   ```
-   [databases]
-   minha_db = host=127.0.0.1 port=8745 dbname=minha_db
-   ```
-2. Reiniciar pgbouncer: `sudo -u postgres pkill -HUP pgbouncer`
-3. No serviço/script, conectar a `localhost:6432` com as credenciais da DB
+O ctx-observer cron ainda usa o database `hindsight` (separado de `hermes_gateway`). Este é o database do serviço hindsight/observability — não é o mesmo que os gateways. Mantém-se separado porque é um serviço de analytics diferente.
 
 ## Erro comum
 
@@ -65,7 +71,7 @@ HERMES_PG_PASSWORD=hindsight_pass
 FATAL: server login failed: wrong password type
 ```
 
-Significa que pgbouncer não tem a password do utilizador em `userlist.txt` ou a password no PostgreSQL está encriptada de forma diferente. Verificar:
+Significa que pgbouncer não tem a password do utilizador em `userlist.txt`. Verificar:
 1. `password_encryption` no PostgreSQL = `md5`
 2. `pg_hba.conf` para 127.0.0.1 = `trust` ou `md5`
 3. `userlist.txt` tem entrada para o utilizador com hash md5
